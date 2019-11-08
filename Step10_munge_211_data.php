@@ -52,6 +52,7 @@ ALTER TABLE $database.$tablename"."_need
 	$sql["create the agency table"] = "
 CREATE TABLE $database.$tablename"."_agency (
   `id` int(11) NOT NULL,
+  `agency_id` int(11) NOT NULL,
   `agency_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -62,7 +63,7 @@ ALTER TABLE $database.$tablename"."_agency
   ADD PRIMARY KEY (`id`);
 ";
 
-	$sql["auto increment need table"] = "
+	$sql["auto increment agency table"] = "
 ALTER TABLE $database.$tablename"."_agency
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ";
@@ -75,7 +76,8 @@ ALTER TABLE $database.$tablename"."_agency
 	$sql["create the referral table"] = "
 CREATE TABLE $database.$tablename"."_referral (
   `id` int(11) NOT NULL,
-  `referal_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
+  `referral_id` int(11) NOT NULL,
+  `referral_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ";
@@ -159,6 +161,7 @@ ALTER TABLE $database.$tablename
 
 	run_sql_loop($sql,true);
 
+
 //if we get here, then we have created the database and made space for our new data structures... 	
 //now we need to loop over the data and create our new column information with lots and lots of update statment
 //lets start out by emptying sql
@@ -208,11 +211,22 @@ ALTER TABLE $database.$tablename
 	$agency_data = [];
 	$day_count = 1;
 	$last_date_part = 'something';
+	$row_count = 0;
+	//this value limits the row import to a few thousand...
+	$row_limit = 1000;
+	//this value keeps the script running for all of the rows..
+//	$row_limit = 999999999999999999999999999999999999999999;
 
 	//run the first loop, which will calculate the data and update the rows as we go..
 	while($row = mysqli_fetch_assoc($result)){
-
+		$row_count++;
+		//var_export($row);
+		//exit();
 		extract($row); //saves so much time..
+
+		$age = $row['age'];
+		$id = $row['id'];
+
 
 		//a series of explode statements will allow us to get the specific values of the date and time string...
 		//the going in format is '1/1/19 12:12'
@@ -230,7 +244,7 @@ ALTER TABLE $database.$tablename
 		//now lets calculate the time block.. 
 		$time_block = $time_block_map[$hour];
 
-		$this_year = "20$year";
+		$this_year = "20$two_digit_year";
 
 		$row_date_str = "$this_year-$month-$day";
 		$timestamp = strtotime($row_date_str);
@@ -297,10 +311,73 @@ WHERE id = '$id'
 		$agency_name_array = explode(';',$parent_agency_name);	
 		$agency_id_array = explode(';',$parent_agency_id);
 
+		foreach($agency_id_array as $i => $agency_id){
+
+			$agency_name = $agency_name_array[$i];
+			$agency_data["$agency_name-$agency_id"] = [
+					'agency_name' => $agency_name,
+					'agendy_id' => $agency_id,
+				];
+		}
 
 
+		$referral_name_array = explode(';',$referral_name);	
+		$referral_id_array = explode(';',$referral_id);
+		
+		foreach($referral_id_array as $i => $referral_id){
+			$referral_name = $referral_name_array[$i];
+			$referral_data["$referral_name-$referral_id"] = [
+					'referral_name' => $referral_name,
+					'referral_id' => $referral_id,
+				];
+		}
+
+		if($row_count > $row_limit){
+			break;
+		}
 
 	}
+
+	//now we are going to 
+
+	foreach($referral_data as $referral_row){
+		extract($referral_row);
+
+		if(strlen($referral_id) == 0){
+			$referral_id = 0;
+		}
+
+		if(strlen($referral_name) > 0){
+			$referral_name = f_mysql_real_escape_string($referral_name);
+			$insert_sql = "
+INSERT INTO $database.$tablename"."_referral (`id`, `referral_id`, `referral_name`) VALUES (NULL, '$referral_id', '$referral_name');
+";
+
+			f_mysql_query($insert_sql);
+			echo 'r';
+		}
+
+	}
+
+	foreach($agency_data as $agency_row){
+		extract($agency_row);
+
+		if(strlen($agency_id) == 0){
+			$agency_id = 0;
+		}
+
+		if(strlen($agency_name) > 0){
+			$agency_name = f_mysql_real_escape_string($agency_name);
+			$insert_sql = "
+INSERT INTO $database.$tablename"."_agency (`id`, `agency_id`, `agency_name`) VALUES (NULL, '$agency_id', '$agency_name');
+";
+
+			f_mysql_query($insert_sql);
+			echo 'a';
+		}
+
+	}
+
 
 
 function isWeekday($timestamp){

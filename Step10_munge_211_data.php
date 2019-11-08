@@ -43,6 +43,19 @@ ALTER TABLE $database.$tablename"."_need
 ALTER TABLE $database.$tablename"."_need
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ";
+	$sql["drop need link table"] = "DROP TABLE IF EXISTS $database.$tablename"."_to_need";
+
+	$sql["create need link table"] = "
+CREATE TABLE $database.$tablename"."_to_need (
+  `call_id` int(11) NOT NULL,
+  `need_id` int(11) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+";
+
+	$sql["index need link table"] = "
+ALTER TABLE $database.$tablename"."_to_need
+  ADD PRIMARY KEY (`call_id`,`need_id`);
+";
 
 
 //and a basic agency table
@@ -52,7 +65,7 @@ ALTER TABLE $database.$tablename"."_need
 	$sql["create the agency table"] = "
 CREATE TABLE $database.$tablename"."_agency (
   `id` int(11) NOT NULL,
-  `agency_id` int(11) NOT NULL,
+  `agency_identifier` int(11) NOT NULL,
   `agency_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -68,6 +81,21 @@ ALTER TABLE $database.$tablename"."_agency
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ";
 
+	$sql["drop agency link table"] = "DROP TABLE IF EXISTS $database.$tablename"."_to_agency";
+
+	$sql["create agency link table"] = "
+CREATE TABLE $database.$tablename"."_to_agency (
+  `call_id` int(11) NOT NULL,
+  `agency_id` int(11) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+";
+
+	$sql["index agency link table"] = "
+ALTER TABLE $database.$tablename"."_to_agency
+  ADD PRIMARY KEY (`call_id`,`agency_id`);
+";
+
+
 
 //and a basic referral table
 
@@ -76,7 +104,7 @@ ALTER TABLE $database.$tablename"."_agency
 	$sql["create the referral table"] = "
 CREATE TABLE $database.$tablename"."_referral (
   `id` int(11) NOT NULL,
-  `referral_id` int(11) NOT NULL,
+  `referral_identifier` int(11) NOT NULL,
   `referral_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -90,6 +118,19 @@ ALTER TABLE $database.$tablename"."_referral
 	$sql["auto increment referral table"] = "
 ALTER TABLE $database.$tablename"."_referral
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+";
+	$sql["drop referral link table"] = "DROP TABLE IF EXISTS $database.$tablename"."_to_referral";
+
+	$sql["create referral link table"] = "
+CREATE TABLE $database.$tablename"."_to_referral (
+  `call_id` int(11) NOT NULL,
+  `referral_id` int(11) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+";
+
+	$sql["index referral link table"] = "
+ALTER TABLE $database.$tablename"."_to_referral
+  ADD PRIMARY KEY (`call_id`,`referral_id`);
 ";
 
 
@@ -118,9 +159,9 @@ CREATE TABLE $database.$tablename (
   `need_taxonomy_code` varchar(1000) DEFAULT NULL,
   `met_or_reason_unmet` varchar(1000) DEFAULT NULL,
   `parent_agency_name` varchar(1000) DEFAULT NULL,
-  `parent_agency_id` varchar(1000) DEFAULT NULL,
+  `parent_agency_identifier` varchar(1000) DEFAULT NULL,
   `referral_name` varchar(1000) DEFAULT NULL,
-  `referral_id` varchar(1000) DEFAULT NULL,
+  `referral_identifier` varchar(1000) DEFAULT NULL,
   `benefits_information_call` varchar(1000) DEFAULT NULL,
   `benefits_referral_call` varchar(1000) DEFAULT NULL,
   `benefits_transfer_call` varchar(1000) DEFAULT NULL,
@@ -300,7 +341,8 @@ WHERE id = '$id'
 		}
 
 		foreach($need_name_array as $i => $need_name){
-			$need_taxonomy = $need_taxonomy_array[$i];
+			$need_name = trim($need_name);
+			$need_taxonomy = trim($need_taxonomy_array[$i]);
 
 			$need_data["$need_name-$need_taxonomy"] = [
 					'need_name' => $need_name,
@@ -309,26 +351,27 @@ WHERE id = '$id'
 		}
 
 		$agency_name_array = explode(';',$parent_agency_name);	
-		$agency_id_array = explode(';',$parent_agency_id);
+		$agency_id_array = explode(';',$parent_agency_identifier);
 
-		foreach($agency_id_array as $i => $agency_id){
-
-			$agency_name = $agency_name_array[$i];
-			$agency_data["$agency_name-$agency_id"] = [
+		foreach($agency_id_array as $i => $agency_identifier){
+			$agency_identifier = trim($agency_identifier);
+			$agency_name = trim($agency_name_array[$i]);
+			$agency_data["$agency_name-$agency_identifier"] = [
 					'agency_name' => $agency_name,
-					'agency_id' => $agency_id,
+					'agency_identifier' => $agency_identifier,
 				];
 		}
 
 
 		$referral_name_array = explode(';',$referral_name);	
-		$referral_id_array = explode(';',$referral_id);
+		$referral_id_array = explode(';',$referral_identifier);
 		
-		foreach($referral_id_array as $i => $referral_id){
-			$referral_name = $referral_name_array[$i];
-			$referral_data["$referral_name-$referral_id"] = [
+		foreach($referral_id_array as $i => $referral_identifier){
+			$referral_identifier = trim($referral_identifier);
+			$referral_name = trim($referral_name_array[$i]);
+			$referral_data["$referral_name-$referral_identifier"] = [
 					'referral_name' => $referral_name,
-					'referral_id' => $referral_id,
+					'referral_identifier' => $referral_identifier,
 				];
 		}
 
@@ -343,14 +386,14 @@ WHERE id = '$id'
 	foreach($referral_data as $referral_row){
 		extract($referral_row);
 
-		if(strlen($referral_id) == 0){
-			$referral_id = 0;
+		if(strlen($referral_identifer) == 0){
+			$referral_identifier = 0;
 		}
 
 		if(strlen($referral_name) > 0){
 			$referral_name = f_mysql_real_escape_string($referral_name);
 			$insert_sql = "
-INSERT INTO $database.$tablename"."_referral (`id`, `referral_id`, `referral_name`) VALUES (NULL, '$referral_id', '$referral_name');
+INSERT INTO $database.$tablename"."_referral (`id`, `referral_identifier`, `referral_name`) VALUES (NULL, '$referral_identifier', '$referral_name');
 ";
 
 			f_mysql_query($insert_sql);
@@ -362,14 +405,14 @@ INSERT INTO $database.$tablename"."_referral (`id`, `referral_id`, `referral_nam
 	foreach($agency_data as $agency_row){
 		extract($agency_row);
 
-		if(strlen("$agency_id") == 0){
-			$agency_id = 0;
+		if(strlen("$agency_identifier") == 0){
+			$agency_identifier = 0;
 		}
 
 		if(strlen($agency_name) > 0){
 			$agency_name = f_mysql_real_escape_string($agency_name);
 			$insert_sql = "
-INSERT INTO $database.$tablename"."_agency (`id`, `agency_id`, `agency_name`) VALUES (NULL, '$agency_id', '$agency_name');
+INSERT INTO $database.$tablename"."_agency (`id`, `agency_id`, `agency_name`) VALUES (NULL, '$agency_identifier', '$agency_name');
 ";
 
 			f_mysql_query($insert_sql);
@@ -396,7 +439,66 @@ INSERT INTO $database.$tablename"."_need (`id`, `need_taxonomy`, `need_name`) VA
 	}
 
 
+	//now we load the data back for need
+	$need_query = "SELECT * FROM  $database.$tablename"."_need";
+	$result = f_mysql_query($need_query);
+	$need_data = [];
+	while($row = mysqli_fetch_assoc($result)){
+		$need_data[$row['need_taxonomy']] = $row;
+	}
 
+	//now we load the data back for agency
+	$agency_query = "SELECT * FROM  $database.$tablename"."_agency";
+	$result = f_mysql_query($agency_query);
+	$agency_data = [];
+	while($row = mysqli_fetch_assoc($result)){
+		$agency_data[$row['agency_id']] = $row;
+	}
+
+	//now we load the data back 
+	$referral_query = "SELECT * FROM  $database.$tablename"."_referral";
+	$result = f_mysql_query($referral_query);
+	$referral_data = [];
+	while($row = mysqli_fetch_assoc($result)){
+		$referral_data[$row['referral_id']] = $row;
+	}
+
+	///noww... we loop over the main data again...
+
+	$select_sql = "SELECT * FROM $database.$tablename";
+	$result = f_mysql_query($select_sql); //fyi f_mysql_query is just a wrapper for mysqli_query
+
+	//the second loop we perform the linking...	
+	while($row = mysqli_fetch_assoc($result)){
+
+		$id = $row['id'];
+
+		$need_taxonomy_array = explode('*',$need_taxonomy_code);
+		$agency_id_array = explode(';',$parent_agency_id);
+		$referral_id_array = explode(';',$referral_id);
+
+		foreach($need_taxonomy_array as $this_need_taxonomy){
+			$need_id = $need_data[$this_need_taxonomy]['id'];
+			$insert_sql = "INSERT INTO $database.$tablename"."_to_need (`call_id`,`need_id`) VALUES ('$id','$need_id')";
+			f_mysql_query($insert_sql);
+			echo 'ln';
+		}
+
+		foreach($agency_id_array as $this_agency_id){
+			$agency_id = $agency_data[$this_agency_id]['id'];
+			$insert_sql = "INSERT INTO $database.$tablename"."_to_agency (`call_id`,`agency_id`) VALUES ('$id','$agency_id')";
+			f_mysql_query($insert_sql);
+			echo 'la';
+		}
+			
+		foreach($referral_id_array as $this_referral_id){
+			$referral_id = $referral_data[$this_referral_id]['id'];
+			$insert_sql = "INSERT INTO $database.$tablename"."_to_referral (`call_id`,`referral_id`) VALUES ('$id','$referral_id')";
+			f_mysql_query($insert_sql);
+			echo 'lr';
+		}
+
+	}
 
 
 function isWeekday($timestamp){

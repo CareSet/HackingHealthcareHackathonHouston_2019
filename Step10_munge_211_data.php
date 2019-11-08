@@ -254,9 +254,9 @@ ALTER TABLE $database.$tablename
 	$last_date_part = 'something';
 	$row_count = 0;
 	//this value limits the row import to a few thousand...
-	$row_limit = 1000;
+//	$row_limit = 1000;
 	//this value keeps the script running for all of the rows..
-//	$row_limit = 999999999999999999999999999999999999999999;
+	$row_limit = 999999999999999999999999999999999999999999;
 
 	//run the first loop, which will calculate the data and update the rows as we go..
 	while($row = mysqli_fetch_assoc($result)){

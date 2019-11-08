@@ -152,7 +152,7 @@ CREATE TABLE $database.$tablename (
   `military_branch_active_duty` varchar(55) DEFAULT NULL,
   `preferred_language` varchar(255) DEFAULT NULL,
   `other_language` varchar(255) DEFAULT NULL,
-  `zip_code` varchar(6) DEFAULT NULL,
+  `zip_code` varchar(50) DEFAULT NULL,
   `city` varchar(255) DEFAULT NULL,
   `county` varchar(255) DEFAULT NULL,
   `need_name` varchar(1000) DEFAULT NULL,
@@ -339,13 +339,17 @@ WHERE id = '$id'
 			echo "$need_name and $need_taxonomy_code are broken!!\n";
 			var_export($need_name_array);
 			var_export($need_taxonomy_array);
-			exit();
+//			exit();
 		}
 
 		foreach($need_name_array as $i => $need_name){
 			$need_name = trim($need_name);
-			$need_taxonomy = trim($need_taxonomy_array[$i]);
-
+			if(isset($need_taxonomy_array[$i])){
+				$need_taxonomy = trim($need_taxonomy_array[$i]);
+			}else{
+				$need_taxonomy = 'unknown';
+			}
+			
 			$need_data["$need_name-$need_taxonomy"] = [
 					'need_name' => $need_name,
 					'need_taxonomy' => $need_taxonomy

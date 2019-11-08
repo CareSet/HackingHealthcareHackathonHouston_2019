@@ -2,45 +2,6 @@
 //PLEASE start using mysql.pdo.php
 //instead of this file...
 
-require_once(__DIR__ . '/../util/Spyc.php');
-
-/*
-db.yaml file contents... password should be a generated password
-mysql_host: localhost
-mysql_user: root
-mysql_password: 'password'
-mysql_database: state_data
-*/
-
-//db configuration must be in db.yaml file
-//in the format above...
-
-	$db_yaml_places = [
-		__DIR__ .'/db.yaml',
-		__DIR__ .'/../config/db.yaml',
-		__DIR__ .'/mysql.yaml',
-		__DIR__ .'/../config/mysql.yaml',
-		__DIR__ .'/config.yaml',
-		__DIR__ .'/../config/config.yaml',
-		__DIR__ .'/../config.yaml',
-		];
-
-$yep_db_is_def_here = false;
-foreach($db_yaml_places as $maybe_db_is_here){
-	if(file_exists($maybe_db_is_here)){
-		$yep_db_is_def_here = $maybe_db_is_here;
-	}
-}
-
-if(!$yep_db_is_def_here){
-	echo "I cannot find the database config file\n I looked here\n";
-	var_export($db_yaml_places);
-	exit();
-}
-
-
-if(file_exists($yep_db_is_def_here)){
-$db = Spyc::YAMLLoad($yep_db_is_def_here);
 
 if(!isset($db['mysql_host'])){
 	echo "Well shit, I found $yep_db_is_def_here, but it looks like there is no mysql config inside...\n";

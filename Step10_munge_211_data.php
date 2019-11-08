@@ -282,6 +282,8 @@ ALTER TABLE $database.$tablename
 			$day_count = 1;
 		}
 
+		$last_date_part = $date_part;
+
 		//now lets calculate the time block.. 
 		$time_block = $time_block_map[$hour];
 
@@ -386,7 +388,7 @@ WHERE id = '$id'
 	foreach($referral_data as $referral_row){
 		extract($referral_row);
 
-		if(strlen($referral_identifer) == 0){
+		if(strlen($referral_identifier) == 0){
 			$referral_identifier = 0;
 		}
 
@@ -412,7 +414,7 @@ INSERT INTO $database.$tablename"."_referral (`id`, `referral_identifier`, `refe
 		if(strlen($agency_name) > 0){
 			$agency_name = f_mysql_real_escape_string($agency_name);
 			$insert_sql = "
-INSERT INTO $database.$tablename"."_agency (`id`, `agency_id`, `agency_name`) VALUES (NULL, '$agency_identifier', '$agency_name');
+INSERT INTO $database.$tablename"."_agency (`id`, `agency_identifier`, `agency_name`) VALUES (NULL, '$agency_identifier', '$agency_name');
 ";
 
 			f_mysql_query($insert_sql);
@@ -452,7 +454,7 @@ INSERT INTO $database.$tablename"."_need (`id`, `need_taxonomy`, `need_name`) VA
 	$result = f_mysql_query($agency_query);
 	$agency_data = [];
 	while($row = mysqli_fetch_assoc($result)){
-		$agency_data[$row['agency_id']] = $row;
+		$agency_data[$row['agency_identifier']] = $row;
 	}
 
 	//now we load the data back 
@@ -460,8 +462,9 @@ INSERT INTO $database.$tablename"."_need (`id`, `need_taxonomy`, `need_name`) VA
 	$result = f_mysql_query($referral_query);
 	$referral_data = [];
 	while($row = mysqli_fetch_assoc($result)){
-		$referral_data[$row['referral_id']] = $row;
+		$referral_data[$row['referral_identifier']] = $row;
 	}
+
 
 	///noww... we loop over the main data again...
 
@@ -469,36 +472,72 @@ INSERT INTO $database.$tablename"."_need (`id`, `need_taxonomy`, `need_name`) VA
 	$result = f_mysql_query($select_sql); //fyi f_mysql_query is just a wrapper for mysqli_query
 
 	//the second loop we perform the linking...	
+	$row_count = 0;
 	while($row = mysqli_fetch_assoc($result)){
+
+		$row_count++;
 
 		$id = $row['id'];
 
+
+		extract($row); //cannot forget
+
 		$need_taxonomy_array = explode('*',$need_taxonomy_code);
-		$agency_id_array = explode(';',$parent_agency_id);
-		$referral_id_array = explode(';',$referral_id);
+		$agency_id_array = explode(';',$parent_agency_identifier);
+		$referral_id_array = explode(';',$referral_identifier);
 
 		foreach($need_taxonomy_array as $this_need_taxonomy){
-			$need_id = $need_data[$this_need_taxonomy]['id'];
-			$insert_sql = "INSERT INTO $database.$tablename"."_to_need (`call_id`,`need_id`) VALUES ('$id','$need_id')";
-			f_mysql_query($insert_sql);
-			echo 'ln';
+			if(isset($need_data[$this_need_taxonomy])){
+				$need_id = $need_data[$this_need_taxonomy]['id'];
+				$insert_sql = "INSERT IGNORE INTO $database.$tablename"."_to_need (`call_id`,`need_id`) VALUES ('$id','$need_id')";
+				f_mysql_query($insert_sql);
+			}
+	//		echo 'ln';
 		}
 
-		foreach($agency_id_array as $this_agency_id){
-			$agency_id = $agency_data[$this_agency_id]['id'];
-			$insert_sql = "INSERT INTO $database.$tablename"."_to_agency (`call_id`,`agency_id`) VALUES ('$id','$agency_id')";
-			f_mysql_query($insert_sql);
-			echo 'la';
+		foreach($agency_id_array as $this_agency_identifier){
+			if(!isset($agency_data[$this_agency_identifier])){
+			//	echo "xa";
+			}else{
+
+				$agency_id = $agency_data[$this_agency_identifier]['id'];
+				$insert_sql = "INSERT IGNORE INTO $database.$tablename"."_to_agency (`call_id`,`agency_id`) VALUES ('$id','$agency_id')";
+				f_mysql_query($insert_sql);
+			//	echo 'la';
+			}
 		}
 			
-		foreach($referral_id_array as $this_referral_id){
-			$referral_id = $referral_data[$this_referral_id]['id'];
-			$insert_sql = "INSERT INTO $database.$tablename"."_to_referral (`call_id`,`referral_id`) VALUES ('$id','$referral_id')";
-			f_mysql_query($insert_sql);
-			echo 'lr';
+		foreach($referral_id_array as $this_referral_identifier){
+			if(isset($referral_data[$this_referral_identifier])){
+				$referral_id = $referral_data[$this_referral_identifier]['id'];
+				$insert_sql = "INSERT IGNORE INTO $database.$tablename"."_to_referral (`call_id`,`referral_id`) VALUES ('$id','$referral_id')";
+				f_mysql_query($insert_sql);
+//				echo "$this_referral_identifier->$referral_id ";
+			}
+		}
+
+		echo 'l';
+
+		if($row_count > $row_limit){
+			break;
 		}
 
 	}
+
+	$drop_extra_columns_sql = "
+ALTER TABLE $database.$tablename
+  DROP `date_of_call_start_text`,
+  DROP `date_of_call_end_text`,
+  DROP `age`,
+  DROP `city`,
+  DROP `county`;
+";
+
+	f_mysql_query($drop_extra_columns_sql);
+	
+
+
+	echo "\nall done.\n";
 
 
 function isWeekday($timestamp){

@@ -316,7 +316,7 @@ WHERE id = '$id'
 			$agency_name = $agency_name_array[$i];
 			$agency_data["$agency_name-$agency_id"] = [
 					'agency_name' => $agency_name,
-					'agendy_id' => $agency_id,
+					'agency_id' => $agency_id,
 				];
 		}
 
@@ -338,7 +338,7 @@ WHERE id = '$id'
 
 	}
 
-	//now we are going to 
+	//now we are going to create the database tables of the supporting data sets... 
 
 	foreach($referral_data as $referral_row){
 		extract($referral_row);
@@ -362,7 +362,7 @@ INSERT INTO $database.$tablename"."_referral (`id`, `referral_id`, `referral_nam
 	foreach($agency_data as $agency_row){
 		extract($agency_row);
 
-		if(strlen($agency_id) == 0){
+		if(strlen("$agency_id") == 0){
 			$agency_id = 0;
 		}
 
@@ -377,6 +377,25 @@ INSERT INTO $database.$tablename"."_agency (`id`, `agency_id`, `agency_name`) VA
 		}
 
 	}
+
+
+	foreach($need_data as $need_row){
+		extract($need_row);
+
+
+		if(strlen($need_name) > 0){
+			$need_name = f_mysql_real_escape_string($need_name);
+			$insert_sql = "
+INSERT INTO $database.$tablename"."_need (`id`, `need_taxonomy`, `need_name`) VALUES (NULL, '$need_taxonomy', '$need_name');
+";
+
+			f_mysql_query($insert_sql);
+			echo 'n';
+		}
+
+	}
+
+
 
 
 

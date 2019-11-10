@@ -116,6 +116,9 @@
 		if(is_numeric($age)){
 			$age_above = ceil($age/5) * 5;
 			$age_below = floor($age/5) * 5;
+			if($age_below == $age_above){
+				$age_above = $age_above + 5;
+			}
 			$age_range = "$age_below-$age_above";	
 		}else{
 			$age_range = 'unknown';
@@ -288,7 +291,8 @@ INSERT INTO $database.$tablename"."_need (`id`, `need_taxonomy`, `need_name`) VA
 
 	//the second loop we perform the linking...	
 	$row_count = 0;
-	while($row = mysqli_fetch_assoc($result)){
+//	while($row = mysqli_fetch_assoc($result)){
+	while(false){
 
 		$row_count++;
 
